@@ -1,0 +1,218 @@
+# ==============================================================================
+# GKE PLATFORM ENGINE: WHAT AgentApp EXPANDS INTO AUTOMATICALLY
+# ==============================================================================
+# This bundle represents the complete "Shift-Down" implementation:
+# 1. Identity: Workload Identity Federation (Zero static keys)
+# 2. Agent Orchestrator: Main reasoning pod with OpenTelemetry GenAI tracing
+# 3. Agent Sandbox: gVisor user-space kernel pod for untrusted dynamic code
+# 4. Network Isolation: Default-deny NetworkPolicy (Blocks metadata & locks egress to Gateway)
+# 5. Admission Governance: ValidatingAdmissionPolicy enforcing gVisor on code runners
+# 6. Gateway Routing: Gateway API HTTPRoute for MCP tool traffic
+# ==============================================================================
+
+---
+# 1. IDENTITY: Workload Identity Federation ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: invoice-agent-sa
+  namespace: finance-workloads
+  annotations:
+    iam.gke.io/gcp-service-account: invoice-agent-runner@your-project-id.iam.gserviceaccount.com
+---
+# 2. ORCHESTRATOR: Agent Reasoning Loop Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: invoice-agent-orchestrator
+  namespace: finance-workloads
+  labels:
+    app.kubernetes.io/name: invoice-agent
+    app.kubernetes.io/part-of: agent-workload
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: invoice-agent-orchestrator
+  template:
+    metadata:
+      labels:
+        app: invoice-agent-orchestrator
+        app.kubernetes.io/part-of: agent-workload
+    spec:
+      serviceAccountName: invoice-agent-sa
+      containers:
+      - name: agent-runtime
+        image: gcr.io/your-project-id/agent-runtimes/adk-gemini:v1.2.0
+        env:
+        # Gemini Model Configuration
+        - name: MODEL_NAME
+          value: "gemini-1.5-flash"
+        - name: DAILY_TOKEN_BUDGET
+          value: "500000"
+        - name: MAX_STEPS_PER_LOOP
+          value: "10"
+        # Tool Gateway Endpoint (Agents NEVER call MCP servers directly)
+        - name: AGENT_GATEWAY_URL
+          value: "http://agent-gateway.platform-system.svc.cluster.local:8080"
+        # Sandboxed Code Runner Endpoint
+        - name: CODE_SANDBOX_URL
+          value: "http://invoice-agent-sandbox.finance-workloads.svc.cluster.local:8000"
+        # OpenTelemetry GenAI Semantic Telemetry
+        - name: OTEL_GENAI_SYSTEM
+          value: "gemini"
+        - name: OTEL_AGENT_NAME
+          value: "invoice-agent"
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: "http://opentelemetry-collector.monitoring.svc.cluster.local:4318"
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+---
+# 3. SANDBOX: gVisor Ephemeral Code Interpreter
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: invoice-agent-sandbox
+  namespace: finance-workloads
+  labels:
+    app: invoice-agent-sandbox
+    app.kubernetes.io/component: code-interpreter
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: invoice-agent-sandbox
+  template:
+    metadata:
+      labels:
+        app: invoice-agent-sandbox
+    spec:
+      # 🟨 GKE Sandbox: Intercepts system calls in user-space kernel (runsc)
+      runtimeClassName: gvisor
+      
+      # 🔒 Zero cluster privileges: Cannot call Kubernetes API
+      automountServiceAccountToken: false
+      
+      containers:
+      - name: python-runner
+        image: python:3.11-slim
+        command: ["python", "-m", "http.server", "8000"] # Or custom micro-execution agent runner
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 10001
+          capabilities:
+            drop: ["ALL"]
+        resources:
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+---
+# 4. NETWORK ISOLATION: Default-Deny Egress + Lock to Gateway & DNS
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-lockdown-egress
+  namespace: finance-workloads
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: agent-workload
+  policyTypes:
+  - Egress
+  egress:
+  # Allow 1: CoreDNS for internal name resolution
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # Allow 2: Code sandbox internal communication
+  - to:
+    - podSelector:
+        matchLabels:
+          app: invoice-agent-sandbox
+    ports:
+    - protocol: TCP
+      port: 8000
+  # Allow 3: The Agent Gateway (All MCP tools and external APIs route here)
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: platform-system
+      podSelector:
+        matchLabels:
+          app: agent-gateway
+    ports:
+    - protocol: TCP
+      port: 8080
+  # 🚫 Node Metadata (169.254.169.254) and arbitrary public IPs are IMPLICITLY BLOCKED
+---
+# 5. GOVERNANCE: ValidatingAdmissionPolicy Enforcing gVisor on Code Runners
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: enforce-gvisor-for-code-exec
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   [""]
+      apiVersions: ["v1"]
+      operations:  ["CREATE", "UPDATE"]
+      resources:   ["pods"]
+  matchConditions:
+  # Check if pod is labeled as a code interpreter or execution sandbox
+  - name: is-code-runner
+    expression: "has(object.metadata.labels) && object.metadata.labels.get('app.kubernetes.io/component') == 'code-interpreter'"
+  validations:
+  - expression: "has(object.spec.runtimeClassName) && object.spec.runtimeClassName == 'gvisor'"
+    message: "POLICY REJECTION: Any pod with component=code-interpreter MUST specify runtimeClassName: gvisor."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: enforce-gvisor-binding
+spec:
+  policyName: enforce-gvisor-for-code-exec
+  validationActions: [Deny]
+  matchResources:
+    namespaceSelector:
+      matchExpressions:
+      - key: kubernetes.io/metadata.name
+        operator: Exists
+---
+# 6. GATEWAY API: Routing Tool Invocations to MCP Endpoints
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: invoice-agent-tool-route
+  namespace: platform-system
+spec:
+  parentRefs:
+  - name: agent-gateway
+    sectionName: http
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /tools/catalog/bigquery-readonly
+      headers:
+      - name: X-Agent-Identity
+        value: invoice-agent
+    backendRefs:
+    - name: bigquery-mcp-service
+      port: 8080

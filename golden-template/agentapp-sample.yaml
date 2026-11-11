@@ -1,0 +1,29 @@
+apiVersion: platform.k8s.io/v1alpha1
+kind: AgentApp
+metadata:
+  name: invoice-agent
+  namespace: finance-workloads
+spec:
+  # 1. Framework & Runtime Loop
+  framework: adk
+  model: gemini-1.5-flash
+  
+  # 2. Approved Enterprise Tools (Vetted MCP Server Catalog)
+  tools:
+  - catalog/bigquery-readonly
+  - catalog/sap-invoicing-mcp
+  
+  # 3. Dynamic Untrusted Code Execution Isolation (Enforces gVisor)
+  codeExecution:
+    enabled: true
+    language: python
+    timeoutSeconds: 30
+    
+  # 4. Agent Cost & Loop Defense Guardrails
+  budget:
+    dailyTokens: 500000
+    maxStepsPerLoop: 10
+    
+  # 5. Cloud IAM Binding via Workload Identity Federation
+  identity:
+    gcpServiceAccount: invoice-agent-runner@your-project-id.iam.gserviceaccount.com

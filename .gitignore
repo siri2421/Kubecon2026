@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*ORIGINAL_BACKUP*
+test_*
+*.bak
+.DS_Store
+*11Slides*
+The_Golden_Path_for_AI_Agents_on_GKE.pptx
