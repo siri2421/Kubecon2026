@@ -46,8 +46,7 @@ For AI agents, modern platform engineering implements **"Shift-Down"**:
 * [**`codelabs/`**](./codelabs/): Hands-on, step-by-step tutorials featured in the talk:
   * [**Codelab 1: Deploy Secure AI Agents on GKE**](./codelabs/01-deploy-secure-ai-agents-in-gke/README.md) — gVisor sandbox, Workload Identity, warm pools, egress NetworkPolicy, admission controls.
   * [**Codelab 2: Deploy ADK Agents to GKE**](./codelabs/02-deploy-adk-agents-to-gke/README.md) — Python ADK agent with Gemini 1.5 Flash, container packaging, and `AgentApp` Golden Path deployment.
-* [**`Golden_Path_for_AI_Agents_KubeCon_12Slides.pptx`**](./Golden_Path_for_AI_Agents_KubeCon_12Slides.pptx): Official 12-slide KubeCon presentation deck with synchronized speaker notes and Google Sans typography.
-* [**`Golden Path for AI Agents.pptx`**](./Golden%20Path%20for%20AI%20Agents.pptx): Full 60-slide master Google Cloud deck including appendix template catalog.
+* [**`Golden_Path_for_AI_Agents_KubeCon_12Slides.pptx`**](./Golden_Path_for_AI_Agents_KubeCon_12Slides.pptx): Official 12-slide KubeCon presentation deck with synchronized speaker notes, Google Sans typography, and embedded QR code.
 * [**`golden-template/`**](./golden-template/): Production Kubernetes manifests and developer spec templates:
   * [`agentapp-sample.yaml`](./golden-template/agentapp-sample.yaml): The 10-line developer interface.
   * [`platform-manifests.yaml`](./golden-template/platform-manifests.yaml): Complete expanded production infrastructure bundle.
