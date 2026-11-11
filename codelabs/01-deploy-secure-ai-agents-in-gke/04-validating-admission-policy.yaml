@@ -1,0 +1,33 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: enforce-agent-sandbox
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      operations: ["CREATE", "UPDATE"]
+      resources: ["pods"]
+  matchConditions:
+  - name: is-agent-runner
+    expression: >-
+      has(object.metadata.labels) && 
+      'app.kubernetes.io/component' in object.metadata.labels &&
+      object.metadata.labels['app.kubernetes.io/component'] == 'code-runner'
+  validations:
+  - expression: "has(object.spec.runtimeClassName) && object.spec.runtimeClassName == 'gvisor'"
+    message: "Security Policy Violation: Agent code runner pods MUST run with runtimeClassName: gvisor."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: enforce-agent-sandbox-binding
+spec:
+  policyName: enforce-agent-sandbox
+  validationActions: [Deny]
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        environment: production

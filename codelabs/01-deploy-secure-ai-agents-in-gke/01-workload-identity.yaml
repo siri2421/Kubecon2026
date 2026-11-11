@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: invoice-agent-sa
+  namespace: finance-workloads
+  annotations:
+    iam.gke.io/gcp-service-account: invoice-agent-runner@your-project-id.iam.gserviceaccount.com

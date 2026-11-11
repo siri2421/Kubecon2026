@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-egress-gateway-only
+  namespace: finance-workloads
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: agent-workload
+  policyTypes:
+  - Egress
+  egress:
+  # Allow CoreDNS queries
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow egress ONLY to Agent Gateway
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: platform-gateway
+      podSelector:
+        matchLabels:
+          role: agent-gateway
+    ports:
+    - protocol: TCP
+      port: 8080
