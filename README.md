@@ -112,9 +112,11 @@ All references below are live and verified:
 * **GKE Network Policies (Egress Lockdown Guide):** [cloud.google.com/kubernetes-engine/docs/how-to/network-policy](https://cloud.google.com/kubernetes-engine/docs/how-to/network-policy)
 * **Kubernetes Gateway API (MCP & Tool Routing):** [gateway-api.sigs.k8s.io](https://gateway-api.sigs.k8s.io) · [github.com/kubernetes-sigs/gateway-api](https://github.com/kubernetes-sigs/gateway-api)
 
-### 5. Observability & Tracing
+### 5. Observability & Auto-Instrumentation
+* **GKE Observability Concepts (Cloud Operations for GKE):** [cloud.google.com/kubernetes-engine/docs/concepts/observability](https://cloud.google.com/kubernetes-engine/docs/concepts/observability)
+* **OpenTelemetry Operator for Kubernetes (Auto-Instrumentation):** [opentelemetry.io/docs/platforms/kubernetes/operator/automatic/](https://opentelemetry.io/docs/platforms/kubernetes/operator/automatic/) · [github.com/open-telemetry/opentelemetry-operator](https://github.com/open-telemetry/opentelemetry-operator)
 * **OpenTelemetry GenAI Semantic Conventions (Standard Spans):** [opentelemetry.io/docs/specs/semconv/gen-ai/](https://opentelemetry.io/docs/specs/semconv/gen-ai/)
-* **Vertex AI Agent Engine Overview:** [cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/overview](https://cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/overview)
+* **Google Cloud Trace (Distributed Tracing for GKE):** [cloud.google.com/trace/docs/overview](https://cloud.google.com/trace/docs/overview)
 
 ---
 
