@@ -50,8 +50,6 @@ For AI agents, modern platform engineering implements **"Shift-Down"**:
 * [**`golden-template/`**](./golden-template/): Production Kubernetes manifests and developer spec templates:
   * [`agentapp-sample.yaml`](./golden-template/agentapp-sample.yaml): The 10-line developer interface.
   * [`platform-manifests.yaml`](./golden-template/platform-manifests.yaml): Complete expanded production infrastructure bundle.
-* [**`KUBECON_FINAL_SCRIPT.md`**](./KUBECON_FINAL_SCRIPT.md): Complete verbatim talk track, minute-by-minute cues, and Q&A crib sheet.
-* [**`TALK_TRACK_OUTLINE.md`**](./TALK_TRACK_OUTLINE.md): Narrative arc, failure modes breakdown, and technical deep dives.
 
 ---
 
